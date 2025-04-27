@@ -1,0 +1,1111 @@
+<html lang="pt-BR" class="scroll-smooth" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sistema de Gerenciamento de Pedidos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+  />
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+  <!-- Header -->
+  <header class="bg-white shadow p-4 flex justify-between items-center">
+    <h1 class="text-lg font-semibold text-gray-800">Sistema de Gerenciamento de Pedidos</h1>
+    <div class="space-x-4">
+      <button class="text-gray-600 hover:text-gray-900 text-sm font-medium">Configurações</button>
+      <button class="text-red-600 hover:text-red-800 text-sm font-medium">Sair</button>
+    </div>
+  </header>
+
+  <main class="flex-grow container mx-auto p-4 max-w-7xl">
+    <!-- Menu Principal -->
+    <nav class="bg-white rounded shadow p-4 mb-6">
+      <h2 class="font-semibold text-gray-700 mb-3">Menu Principal</h2>
+      <ul class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        <li>
+          <button id="btnCategorias" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm font-medium">Cadastro de Categorias</button>
+        </li>
+        <li>
+          <button id="btnUF" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm font-medium">Cadastro de UF</button>
+        </li>
+        <li>
+          <button id="btnCidades" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm font-medium">Cadastro de Cidades</button>
+        </li>
+        <li>
+          <button id="btnProdutos" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm font-medium">Cadastro de Produtos</button>
+        </li>
+        <li>
+          <button id="btnClientes" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm font-medium">Cadastro de Clientes</button>
+        </li>
+        <li>
+          <button id="btnPedidos" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm font-medium">Pedidos</button>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Content Area -->
+    <section id="contentArea" class="bg-white rounded shadow p-6 min-h-[400px]">
+      <!-- Dynamic content will be injected here -->
+    </section>
+  </main>
+
+  <script>
+    // Data stores for dropdowns and lists (simulate database)
+    const categorias = [
+      { id: 1, descricao: "Eletrônicos" },
+      { id: 2, descricao: "Roupas" },
+      { id: 3, descricao: "Alimentos" },
+    ];
+    const ufs = [
+      { id: 1, sigla: "SP", descricao: "São Paulo" },
+      { id: 2, sigla: "RJ", descricao: "Rio de Janeiro" },
+      { id: 3, sigla: "MG", descricao: "Minas Gerais" },
+    ];
+    const cidades = [
+      { id: 1, ufId: 1, descricao: "São Paulo" },
+      { id: 2, ufId: 2, descricao: "Rio de Janeiro" },
+      { id: 3, ufId: 3, descricao: "Belo Horizonte" },
+    ];
+    const produtos = [
+      { id: 1, descricao: "Smartphone", categoriaId: 1, precoUnitario: 1500.00, quantidadeEstoque: 10, observacoes: "Último modelo" },
+      { id: 2, descricao: "Camiseta", categoriaId: 2, precoUnitario: 50.00, quantidadeEstoque: 100, observacoes: "Algodão 100%" },
+    ];
+    const clientes = [
+      { id: 1, nome: "João Silva", cpfCnpj: "123.456.789-00", telefone: "(11) 99999-9999", email: "joao@email.com", endereco: "Rua A, 123", ufId: 1, cidadeId: 1, cep: "01000-000" },
+      { id: 2, nome: "Maria Souza", cpfCnpj: "12.345.678/0001-99", telefone: "(21) 98888-8888", email: "maria@email.com", endereco: "Av. B, 456", ufId: 2, cidadeId: 2, cep: "20000-000" },
+    ];
+    let pedidos = [];
+
+    // Utility functions
+    function createInput({ id, label, type = "text", value = "", placeholder = "", disabled = false }) {
+      return `
+        <div class="mb-4">
+          <label for="${id}" class="block text-gray-700 text-sm font-medium mb-1">${label}</label>
+          <input
+            type="${type}"
+            id="${id}"
+            name="${id}"
+            value="${value}"
+            placeholder="${placeholder}"
+            ${disabled ? "disabled" : ""}
+            class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      `;
+    }
+    function createSelect({ id, label, options = [], value = "", disabled = false }) {
+      return `
+        <div class="mb-4">
+          <label for="${id}" class="block text-gray-700 text-sm font-medium mb-1">${label}</label>
+          <select
+            id="${id}"
+            name="${id}"
+            ${disabled ? "disabled" : ""}
+            class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Selecione</option>
+            ${options
+              .map(
+                (opt) =>
+                  `<option value="${opt.id}" ${opt.id == value ? "selected" : ""}>${opt.descricao || opt.sigla || opt.nome || opt.referencia || opt.descricao}</option>`
+              )
+              .join("")}
+          </select>
+        </div>
+      `;
+    }
+    function createButton({ id, text, color = "blue", extraClasses = "" }) {
+      const colors = {
+        blue: "bg-blue-600 hover:bg-blue-700 text-white",
+        red: "bg-red-600 hover:bg-red-700 text-white",
+        gray: "bg-gray-300 hover:bg-gray-400 text-gray-800",
+        green: "bg-green-600 hover:bg-green-700 text-white",
+      };
+      return `<button id="${id}" class="px-4 py-2 rounded text-sm font-medium ${colors[color]} ${extraClasses}">${text}</button>`;
+    }
+
+    // Render functions for each screen
+    function renderCategorias() {
+      return `
+        <h2 class="text-xl font-semibold mb-4">Cadastro de Categorias</h2>
+        <form id="formCategorias" class="max-w-md">
+          ${createInput({ id: "categoriaId", label: "ID da Categoria", type: "number", disabled: true })}
+          ${createInput({ id: "categoriaDescricao", label: "Descrição da Categoria", placeholder: "Digite a descrição" })}
+          <div class="space-x-2 mt-4">
+            ${createButton({ id: "btnNovoCategoria", text: "Novo", color: "gray" })}
+            ${createButton({ id: "btnEditarCategoria", text: "Editar", color: "blue" })}
+            ${createButton({ id: "btnGravarCategoria", text: "Gravar", color: "green" })}
+            ${createButton({ id: "btnExcluirCategoria", text: "Excluir", color: "red" })}
+            ${createButton({ id: "btnSairCategoria", text: "Sair", color: "gray" })}
+          </div>
+        </form>
+        <div class="mt-6 max-w-md">
+          <h3 class="font-semibold mb-2">Categorias Cadastradas</h3>
+          <ul id="listaCategorias" class="border border-gray-300 rounded max-h-48 overflow-y-auto text-sm">
+            ${categorias
+              .map(
+                (cat) =>
+                  `<li class="p-2 border-b border-gray-200 cursor-pointer hover:bg-blue-50" data-id="${cat.id}">${cat.id} - ${cat.descricao}</li>`
+              )
+              .join("")}
+          </ul>
+        </div>
+      `;
+    }
+
+    function renderUF() {
+      return `
+        <h2 class="text-xl font-semibold mb-4">Cadastro de UFs</h2>
+        <form id="formUF" class="max-w-md">
+          ${createInput({ id: "ufId", label: "ID da UF", type: "number", disabled: true })}
+          ${createInput({ id: "ufSigla", label: "SIGLA", placeholder: "Ex: SP" })}
+          ${createInput({ id: "ufDescricao", label: "Descrição da UF", placeholder: "Digite a descrição" })}
+          <div class="space-x-2 mt-4">
+            ${createButton({ id: "btnNovoUF", text: "Novo", color: "gray" })}
+            ${createButton({ id: "btnEditarUF", text: "Editar", color: "blue" })}
+            ${createButton({ id: "btnGravarUF", text: "Gravar", color: "green" })}
+            ${createButton({ id: "btnExcluirUF", text: "Excluir", color: "red" })}
+            ${createButton({ id: "btnSairUF", text: "Sair", color: "gray" })}
+          </div>
+        </form>
+        <div class="mt-6 max-w-md">
+          <h3 class="font-semibold mb-2">UFs Cadastradas</h3>
+          <ul id="listaUF" class="border border-gray-300 rounded max-h-48 overflow-y-auto text-sm">
+            ${ufs
+              .map(
+                (uf) =>
+                  `<li class="p-2 border-b border-gray-200 cursor-pointer hover:bg-blue-50" data-id="${uf.id}">${uf.id} - ${uf.sigla} - ${uf.descricao}</li>`
+              )
+              .join("")}
+          </ul>
+        </div>
+      `;
+    }
+
+    function renderCidades() {
+      return `
+        <h2 class="text-xl font-semibold mb-4">Cadastro de Cidades</h2>
+        <form id="formCidades" class="max-w-md">
+          ${createInput({ id: "cidadeId", label: "ID da Cidade", type: "number", disabled: true })}
+          ${createSelect({ id: "cidadeUF", label: "UF", options: ufs })}
+          ${createInput({ id: "cidadeDescricao", label: "Descrição da Cidade", placeholder: "Digite a descrição" })}
+          <div class="space-x-2 mt-4">
+            ${createButton({ id: "btnNovoCidade", text: "Novo", color: "gray" })}
+            ${createButton({ id: "btnEditarCidade", text: "Editar", color: "blue" })}
+            ${createButton({ id: "btnGravarCidade", text: "Gravar", color: "green" })}
+            ${createButton({ id: "btnExcluirCidade", text: "Excluir", color: "red" })}
+            ${createButton({ id: "btnSairCidade", text: "Sair", color: "gray" })}
+          </div>
+        </form>
+        <div class="mt-6 max-w-md">
+          <h3 class="font-semibold mb-2">Cidades Cadastradas</h3>
+          <ul id="listaCidades" class="border border-gray-300 rounded max-h-48 overflow-y-auto text-sm">
+            ${cidades
+              .map((cidade) => {
+                const uf = ufs.find((u) => u.id === cidade.ufId);
+                return `<li class="p-2 border-b border-gray-200 cursor-pointer hover:bg-blue-50" data-id="${cidade.id}">${cidade.id} - ${uf?.sigla || ""} - ${cidade.descricao}</li>`;
+              })
+              .join("")}
+          </ul>
+        </div>
+      `;
+    }
+
+    function renderProdutos() {
+      return `
+        <h2 class="text-xl font-semibold mb-4">Cadastro de Produtos</h2>
+        <form id="formProdutos" class="max-w-md">
+          ${createInput({ id: "produtoId", label: "ID do Produto", type: "number", disabled: true })}
+          ${createInput({ id: "produtoDescricao", label: "Descrição do Produto", placeholder: "Digite a descrição" })}
+          ${createSelect({ id: "produtoCategoria", label: "Categoria", options: categorias })}
+          ${createInput({ id: "produtoPrecoUnitario", label: "Preço Unitário", type: "number", placeholder: "0.00", value: "", step: "0.01" })}
+          ${createInput({ id: "produtoQuantidadeEstoque", label: "Quantidade em Estoque", type: "number", placeholder: "0" })}
+          <div class="mb-4">
+            <label for="produtoObservacoes" class="block text-gray-700 text-sm font-medium mb-1">Observações do Produto</label>
+            <textarea id="produtoObservacoes" name="produtoObservacoes" rows="3" placeholder="Digite observações" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+          </div>
+          <div class="space-x-2 mt-4">
+            ${createButton({ id: "btnNovoProduto", text: "Novo", color: "gray" })}
+            ${createButton({ id: "btnEditarProduto", text: "Editar", color: "blue" })}
+            ${createButton({ id: "btnGravarProduto", text: "Gravar", color: "green" })}
+            ${createButton({ id: "btnExcluirProduto", text: "Excluir", color: "red" })}
+            ${createButton({ id: "btnSairProduto", text: "Sair", color: "gray" })}
+          </div>
+        </form>
+        <div class="mt-6 max-w-md">
+          <h3 class="font-semibold mb-2">Produtos Cadastrados</h3>
+          <ul id="listaProdutos" class="border border-gray-300 rounded max-h-48 overflow-y-auto text-sm">
+            ${produtos
+              .map(
+                (p) =>
+                  `<li class="p-2 border-b border-gray-200 cursor-pointer hover:bg-blue-50" data-id="${p.id}">${p.id} - ${p.descricao} - ${categorias.find(c => c.id === p.categoriaId)?.descricao || ""} - R$ ${p.precoUnitario.toFixed(2)}</li>`
+              )
+              .join("")}
+          </ul>
+        </div>
+      `;
+    }
+
+    function renderClientes() {
+      return `
+        <h2 class="text-xl font-semibold mb-4">Cadastro de Clientes</h2>
+        <form id="formClientes" class="max-w-md">
+          ${createInput({ id: "clienteId", label: "ID do Cliente", type: "number", disabled: true })}
+          ${createInput({ id: "clienteNome", label: "Nome Completo", placeholder: "Digite o nome completo" })}
+          ${createInput({ id: "clienteCpfCnpj", label: "CPF/CNPJ", placeholder: "Digite CPF ou CNPJ" })}
+          ${createInput({ id: "clienteTelefone", label: "Telefone", placeholder: "(00) 00000-0000" })}
+          ${createInput({ id: "clienteEmail", label: "E-mail", type: "email", placeholder: "email@exemplo.com" })}
+          ${createInput({ id: "clienteEndereco", label: "Endereço", placeholder: "Digite o endereço" })}
+          ${createSelect({ id: "clienteUF", label: "UF", options: ufs })}
+          ${createSelect({ id: "clienteCidade", label: "Cidade", options: cidades })}
+          ${createInput({ id: "clienteCEP", label: "CEP", placeholder: "00000-000" })}
+          <div class="space-x-2 mt-4">
+            ${createButton({ id: "btnNovoCliente", text: "Novo", color: "gray" })}
+            ${createButton({ id: "btnEditarCliente", text: "Editar", color: "blue" })}
+            ${createButton({ id: "btnGravarCliente", text: "Gravar", color: "green" })}
+            ${createButton({ id: "btnExcluirCliente", text: "Excluir", color: "red" })}
+            ${createButton({ id: "btnSairCliente", text: "Sair", color: "gray" })}
+          </div>
+        </form>
+        <div class="mt-6 max-w-md overflow-auto max-h-48 border border-gray-300 rounded text-sm">
+          <table class="w-full text-left">
+            <thead class="bg-gray-100 sticky top-0">
+              <tr>
+                <th class="px-2 py-1 border-b border-gray-300">ID</th>
+                <th class="px-2 py-1 border-b border-gray-300">Nome</th>
+                <th class="px-2 py-1 border-b border-gray-300">CPF/CNPJ</th>
+                <th class="px-2 py-1 border-b border-gray-300">Telefone</th>
+                <th class="px-2 py-1 border-b border-gray-300">E-mail</th>
+              </tr>
+            </thead>
+            <tbody id="listaClientes">
+              ${clientes
+                .map(
+                  (c) =>
+                    `<tr class="hover:bg-blue-50 cursor-pointer" data-id="${c.id}">
+                      <td class="px-2 py-1 border-b border-gray-200">${c.id}</td>
+                      <td class="px-2 py-1 border-b border-gray-200">${c.nome}</td>
+                      <td class="px-2 py-1 border-b border-gray-200">${c.cpfCnpj}</td>
+                      <td class="px-2 py-1 border-b border-gray-200">${c.telefone}</td>
+                      <td class="px-2 py-1 border-b border-gray-200">${c.email}</td>
+                    </tr>`
+                )
+                .join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderPedidos() {
+      return `
+        <h2 class="text-xl font-semibold mb-4">Pedidos - Dados do Pedido</h2>
+        <form id="formPedidos" class="max-w-3xl mb-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            ${createInput({ id: "pedidoId", label: "ID do Pedido", type: "number", disabled: true })}
+            ${createSelect({ id: "pedidoCliente", label: "Cliente", options: clientes })}
+            ${createInput({ id: "pedidoData", label: "Data do Pedido", type: "date" })}
+            ${createInput({ id: "pedidoTotal", label: "Total Pedido", type: "number", disabled: true, value: "0.00" })}
+          </div>
+          <div class="space-x-2 mt-4">
+            ${createButton({ id: "btnNovoPedido", text: "Novo Pedido", color: "gray" })}
+            ${createButton({ id: "btnEditarPedido", text: "Editar Pedido", color: "blue" })}
+            ${createButton({ id: "btnCancelarPedido", text: "Cancelar Pedido", color: "red" })}
+            ${createButton({ id: "btnGravarPedido", text: "Gravar Pedido", color: "green" })}
+            ${createButton({ id: "btnSairPedido", text: "Sair", color: "gray" })}
+          </div>
+        </form>
+
+        <h3 class="font-semibold mb-2">Tabela de Produtos</h3>
+        <div class="overflow-auto max-h-72 border border-gray-300 rounded">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-gray-100 sticky top-0">
+              <tr>
+                <th class="px-2 py-1 border-b border-gray-300">ID do Produto</th>
+                <th class="px-2 py-1 border-b border-gray-300">Referência</th>
+                <th class="px-2 py-1 border-b border-gray-300">Descrição</th>
+                <th class="px-2 py-1 border-b border-gray-300">Quantidade</th>
+                <th class="px-2 py-1 border-b border-gray-300">Valor Unitário</th>
+                <th class="px-2 py-1 border-b border-gray-300">Total</th>
+                <th class="px-2 py-1 border-b border-gray-300">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaProdutosPedido">
+              <!-- Produtos do pedido serão listados aqui -->
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-3 space-x-2">
+          ${createButton({ id: "btnIncluirProdutoPedido", text: "Incluir Produto", color: "blue" })}
+          ${createButton({ id: "btnExcluirProdutoPedido", text: "Excluir Produto", color: "red" })}
+        </div>
+      `;
+    }
+
+    // State for current screen and editing
+    let currentScreen = null;
+    let editingId = null;
+    let editingPedidoProdutos = [];
+    let selectedPedidoProdutoIndex = null;
+
+    // Helper to clear form inputs
+    function clearForm(formId) {
+      const form = document.getElementById(formId);
+      if (!form) return;
+      form.reset();
+      // Disable ID fields
+      const idInput = form.querySelector("input[type=number][id$='Id']");
+      if (idInput) idInput.value = "";
+    }
+
+    // Load screen content
+    function loadScreen(screen) {
+      currentScreen = screen;
+      const contentArea = document.getElementById("contentArea");
+      switch (screen) {
+        case "categorias":
+          contentArea.innerHTML = renderCategorias();
+          attachCategoriasEvents();
+          break;
+        case "uf":
+          contentArea.innerHTML = renderUF();
+          attachUFEvents();
+          break;
+        case "cidades":
+          contentArea.innerHTML = renderCidades();
+          attachCidadesEvents();
+          break;
+        case "produtos":
+          contentArea.innerHTML = renderProdutos();
+          attachProdutosEvents();
+          break;
+        case "clientes":
+          contentArea.innerHTML = renderClientes();
+          attachClientesEvents();
+          break;
+        case "pedidos":
+          contentArea.innerHTML = renderPedidos();
+          attachPedidosEvents();
+          break;
+        default:
+          contentArea.innerHTML = "<p>Selecione uma opção no menu.</p>";
+      }
+    }
+
+    // Attach event handlers for Categorias
+    function attachCategoriasEvents() {
+      const form = document.getElementById("formCategorias");
+      const lista = document.getElementById("listaCategorias");
+      const inputId = form.querySelector("#categoriaId");
+      const inputDescricao = form.querySelector("#categoriaDescricao");
+
+      function refreshList() {
+        lista.innerHTML = categorias
+          .map(
+            (cat) =>
+              `<li class="p-2 border-b border-gray-200 cursor-pointer hover:bg-blue-50" data-id="${cat.id}">${cat.id} - ${cat.descricao}</li>`
+          )
+          .join("");
+      }
+
+      lista.querySelectorAll("li").forEach((li) => {
+        li.addEventListener("click", () => {
+          const id = Number(li.dataset.id);
+          const cat = categorias.find((c) => c.id === id);
+          if (cat) {
+            inputId.value = cat.id;
+            inputDescricao.value = cat.descricao;
+            editingId = cat.id;
+          }
+        });
+      });
+
+      lista.addEventListener("click", (e) => {
+        if (e.target.tagName === "LI") {
+          const id = Number(e.target.dataset.id);
+          const cat = categorias.find((c) => c.id === id);
+          if (cat) {
+            inputId.value = cat.id;
+            inputDescricao.value = cat.descricao;
+            editingId = cat.id;
+          }
+        }
+      });
+
+      form.querySelector("#btnNovoCategoria").onclick = () => {
+        editingId = null;
+        inputId.value = "";
+        inputDescricao.value = "";
+        inputDescricao.focus();
+      };
+      form.querySelector("#btnEditarCategoria").onclick = () => {
+        if (!editingId) {
+          alert("Selecione uma categoria para editar.");
+          return;
+        }
+        inputDescricao.focus();
+      };
+      form.querySelector("#btnGravarCategoria").onclick = () => {
+        const descricao = inputDescricao.value.trim();
+        if (!descricao) {
+          alert("Descrição é obrigatória.");
+          return;
+        }
+        if (editingId) {
+          // Edit existing
+          const cat = categorias.find((c) => c.id === editingId);
+          if (cat) {
+            cat.descricao = descricao;
+          }
+        } else {
+          // New
+          const newId = categorias.length ? Math.max(...categorias.map((c) => c.id)) + 1 : 1;
+          categorias.push({ id: newId, descricao });
+          editingId = newId;
+          inputId.value = newId;
+        }
+        refreshList();
+        alert("Categoria salva com sucesso.");
+      };
+      form.querySelector("#btnExcluirCategoria").onclick = () => {
+        if (!editingId) {
+          alert("Selecione uma categoria para excluir.");
+          return;
+        }
+        if (!confirm("Confirma exclusão da categoria?")) return;
+        const index = categorias.findIndex((c) => c.id === editingId);
+        if (index >= 0) {
+          categorias.splice(index, 1);
+          editingId = null;
+          inputId.value = "";
+          inputDescricao.value = "";
+          refreshList();
+          alert("Categoria excluída.");
+        }
+      };
+      form.querySelector("#btnSairCategoria").onclick = () => {
+        loadScreen(null);
+      };
+    }
+
+    // Attach event handlers for UF
+    function attachUFEvents() {
+      const form = document.getElementById("formUF");
+      const lista = document.getElementById("listaUF");
+      const inputId = form.querySelector("#ufId");
+      const inputSigla = form.querySelector("#ufSigla");
+      const inputDescricao = form.querySelector("#ufDescricao");
+
+      function refreshList() {
+        lista.innerHTML = ufs
+          .map(
+            (uf) =>
+              `<li class="p-2 border-b border-gray-200 cursor-pointer hover:bg-blue-50" data-id="${uf.id}">${uf.id} - ${uf.sigla} - ${uf.descricao}</li>`
+          )
+          .join("");
+      }
+
+      lista.addEventListener("click", (e) => {
+        if (e.target.tagName === "LI") {
+          const id = Number(e.target.dataset.id);
+          const uf = ufs.find((u) => u.id === id);
+          if (uf) {
+            inputId.value = uf.id;
+            inputSigla.value = uf.sigla;
+            inputDescricao.value = uf.descricao;
+            editingId = uf.id;
+          }
+        }
+      });
+
+      form.querySelector("#btnNovoUF").onclick = () => {
+        editingId = null;
+        inputId.value = "";
+        inputSigla.value = "";
+        inputDescricao.value = "";
+        inputSigla.focus();
+      };
+      form.querySelector("#btnEditarUF").onclick = () => {
+        if (!editingId) {
+          alert("Selecione uma UF para editar.");
+          return;
+        }
+        inputSigla.focus();
+      };
+      form.querySelector("#btnGravarUF").onclick = () => {
+        const sigla = inputSigla.value.trim().toUpperCase();
+        const descricao = inputDescricao.value.trim();
+        if (!sigla || !descricao) {
+          alert("SIGLA e Descrição são obrigatórios.");
+          return;
+        }
+        if (editingId) {
+          const uf = ufs.find((u) => u.id === editingId);
+          if (uf) {
+            uf.sigla = sigla;
+            uf.descricao = descricao;
+          }
+        } else {
+          const newId = ufs.length ? Math.max(...ufs.map((u) => u.id)) + 1 : 1;
+          ufs.push({ id: newId, sigla, descricao });
+          editingId = newId;
+          inputId.value = newId;
+        }
+        refreshList();
+        alert("UF salva com sucesso.");
+      };
+      form.querySelector("#btnExcluirUF").onclick = () => {
+        if (!editingId) {
+          alert("Selecione uma UF para excluir.");
+          return;
+        }
+        if (!confirm("Confirma exclusão da UF?")) return;
+        const index = ufs.findIndex((u) => u.id === editingId);
+        if (index >= 0) {
+          ufs.splice(index, 1);
+          editingId = null;
+          inputId.value = "";
+          inputSigla.value = "";
+          inputDescricao.value = "";
+          refreshList();
+          alert("UF excluída.");
+        }
+      };
+      form.querySelector("#btnSairUF").onclick = () => {
+        loadScreen(null);
+      };
+    }
+
+    // Attach event handlers for Cidades
+    function attachCidadesEvents() {
+      const form = document.getElementById("formCidades");
+      const lista = document.getElementById("listaCidades");
+      const inputId = form.querySelector("#cidadeId");
+      const selectUF = form.querySelector("#cidadeUF");
+      const inputDescricao = form.querySelector("#cidadeDescricao");
+
+      function refreshList() {
+        lista.innerHTML = cidades
+          .map((cidade) => {
+            const uf = ufs.find((u) => u.id === cidade.ufId);
+            return `<li class="p-2 border-b border-gray-200 cursor-pointer hover:bg-blue-50" data-id="${cidade.id}">${cidade.id} - ${uf?.sigla || ""} - ${cidade.descricao}</li>`;
+          })
+          .join("");
+      }
+
+      lista.addEventListener("click", (e) => {
+        if (e.target.tagName === "LI") {
+          const id = Number(e.target.dataset.id);
+          const cidade = cidades.find((c) => c.id === id);
+          if (cidade) {
+            inputId.value = cidade.id;
+            selectUF.value = cidade.ufId;
+            inputDescricao.value = cidade.descricao;
+            editingId = cidade.id;
+          }
+        }
+      });
+
+      form.querySelector("#btnNovoCidade").onclick = () => {
+        editingId = null;
+        inputId.value = "";
+        selectUF.value = "";
+        inputDescricao.value = "";
+        selectUF.focus();
+      };
+      form.querySelector("#btnEditarCidade").onclick = () => {
+        if (!editingId) {
+          alert("Selecione uma cidade para editar.");
+          return;
+        }
+        selectUF.focus();
+      };
+      form.querySelector("#btnGravarCidade").onclick = () => {
+        const ufId = Number(selectUF.value);
+        const descricao = inputDescricao.value.trim();
+        if (!ufId || !descricao) {
+          alert("UF e Descrição são obrigatórios.");
+          return;
+        }
+        if (editingId) {
+          const cidade = cidades.find((c) => c.id === editingId);
+          if (cidade) {
+            cidade.ufId = ufId;
+            cidade.descricao = descricao;
+          }
+        } else {
+          const newId = cidades.length ? Math.max(...cidades.map((c) => c.id)) + 1 : 1;
+          cidades.push({ id: newId, ufId, descricao });
+          editingId = newId;
+          inputId.value = newId;
+        }
+        refreshList();
+        alert("Cidade salva com sucesso.");
+      };
+      form.querySelector("#btnExcluirCidade").onclick = () => {
+        if (!editingId) {
+          alert("Selecione uma cidade para excluir.");
+          return;
+        }
+        if (!confirm("Confirma exclusão da cidade?")) return;
+        const index = cidades.findIndex((c) => c.id === editingId);
+        if (index >= 0) {
+          cidades.splice(index, 1);
+          editingId = null;
+          inputId.value = "";
+          selectUF.value = "";
+          inputDescricao.value = "";
+          refreshList();
+          alert("Cidade excluída.");
+        }
+      };
+      form.querySelector("#btnSairCidade").onclick = () => {
+        loadScreen(null);
+      };
+    }
+
+    // Attach event handlers for Produtos
+    function attachProdutosEvents() {
+      const form = document.getElementById("formProdutos");
+      const lista = document.getElementById("listaProdutos");
+      const inputId = form.querySelector("#produtoId");
+      const inputDescricao = form.querySelector("#produtoDescricao");
+      const selectCategoria = form.querySelector("#produtoCategoria");
+      const inputPreco = form.querySelector("#produtoPrecoUnitario");
+      const inputQuantidade = form.querySelector("#produtoQuantidadeEstoque");
+      const textareaObs = form.querySelector("#produtoObservacoes");
+
+      function refreshList() {
+        lista.innerHTML = produtos
+          .map(
+            (p) =>
+              `<li class="p-2 border-b border-gray-200 cursor-pointer hover:bg-blue-50" data-id="${p.id}">${p.id} - ${p.descricao} - ${categorias.find(c => c.id === p.categoriaId)?.descricao || ""} - R$ ${p.precoUnitario.toFixed(2)}</li>`
+          )
+          .join("");
+      }
+
+      lista.addEventListener("click", (e) => {
+        if (e.target.tagName === "LI") {
+          const id = Number(e.target.dataset.id);
+          const p = produtos.find((p) => p.id === id);
+          if (p) {
+            inputId.value = p.id;
+            inputDescricao.value = p.descricao;
+            selectCategoria.value = p.categoriaId;
+            inputPreco.value = p.precoUnitario.toFixed(2);
+            inputQuantidade.value = p.quantidadeEstoque;
+            textareaObs.value = p.observacoes;
+            editingId = p.id;
+          }
+        }
+      });
+
+      form.querySelector("#btnNovoProduto").onclick = () => {
+        editingId = null;
+        inputId.value = "";
+        inputDescricao.value = "";
+        selectCategoria.value = "";
+        inputPreco.value = "";
+        inputQuantidade.value = "";
+        textareaObs.value = "";
+        inputDescricao.focus();
+      };
+      form.querySelector("#btnEditarProduto").onclick = () => {
+        if (!editingId) {
+          alert("Selecione um produto para editar.");
+          return;
+        }
+        inputDescricao.focus();
+      };
+      form.querySelector("#btnGravarProduto").onclick = () => {
+        const descricao = inputDescricao.value.trim();
+        const categoriaId = Number(selectCategoria.value);
+        const precoUnitario = parseFloat(inputPreco.value);
+        const quantidadeEstoque = parseInt(inputQuantidade.value);
+        const observacoes = textareaObs.value.trim();
+
+        if (!descricao || !categoriaId || isNaN(precoUnitario) || isNaN(quantidadeEstoque)) {
+          alert("Preencha todos os campos obrigatórios corretamente.");
+          return;
+        }
+        if (editingId) {
+          const p = produtos.find((p) => p.id === editingId);
+          if (p) {
+            p.descricao = descricao;
+            p.categoriaId = categoriaId;
+            p.precoUnitario = precoUnitario;
+            p.quantidadeEstoque = quantidadeEstoque;
+            p.observacoes = observacoes;
+          }
+        } else {
+          const newId = produtos.length ? Math.max(...produtos.map((p) => p.id)) + 1 : 1;
+          produtos.push({ id: newId, descricao, categoriaId, precoUnitario, quantidadeEstoque, observacoes });
+          editingId = newId;
+          inputId.value = newId;
+        }
+        refreshList();
+        alert("Produto salvo com sucesso.");
+      };
+      form.querySelector("#btnExcluirProduto").onclick = () => {
+        if (!editingId) {
+          alert("Selecione um produto para excluir.");
+          return;
+        }
+        if (!confirm("Confirma exclusão do produto?")) return;
+        const index = produtos.findIndex((p) => p.id === editingId);
+        if (index >= 0) {
+          produtos.splice(index, 1);
+          editingId = null;
+          inputId.value = "";
+          inputDescricao.value = "";
+          selectCategoria.value = "";
+          inputPreco.value = "";
+          inputQuantidade.value = "";
+          textareaObs.value = "";
+          refreshList();
+          alert("Produto excluído.");
+        }
+      };
+      form.querySelector("#btnSairProduto").onclick = () => {
+        loadScreen(null);
+      };
+    }
+
+    // Attach event handlers for Clientes
+    function attachClientesEvents() {
+      const form = document.getElementById("formClientes");
+      const lista = document.getElementById("listaClientes");
+      const inputId = form.querySelector("#clienteId");
+      const inputNome = form.querySelector("#clienteNome");
+      const inputCpfCnpj = form.querySelector("#clienteCpfCnpj");
+      const inputTelefone = form.querySelector("#clienteTelefone");
+      const inputEmail = form.querySelector("#clienteEmail");
+      const inputEndereco = form.querySelector("#clienteEndereco");
+      const selectUF = form.querySelector("#clienteUF");
+      const selectCidade = form.querySelector("#clienteCidade");
+      const inputCEP = form.querySelector("#clienteCEP");
+
+      function refreshList() {
+        const tbody = lista;
+        tbody.innerHTML = clientes
+          .map(
+            (c) =>
+              `<tr class="hover:bg-blue-50 cursor-pointer" data-id="${c.id}">
+                <td class="px-2 py-1 border-b border-gray-200">${c.id}</td>
+                <td class="px-2 py-1 border-b border-gray-200">${c.nome}</td>
+                <td class="px-2 py-1 border-b border-gray-200">${c.cpfCnpj}</td>
+                <td class="px-2 py-1 border-b border-gray-200">${c.telefone}</td>
+                <td class="px-2 py-1 border-b border-gray-200">${c.email}</td>
+              </tr>`
+          )
+          .join("");
+      }
+
+      lista.addEventListener("click", (e) => {
+        let tr = e.target.closest("tr");
+        if (!tr) return;
+        const id = Number(tr.dataset.id);
+        const c = clientes.find((c) => c.id === id);
+        if (c) {
+          inputId.value = c.id;
+          inputNome.value = c.nome;
+          inputCpfCnpj.value = c.cpfCnpj;
+          inputTelefone.value = c.telefone;
+          inputEmail.value = c.email;
+          inputEndereco.value = c.endereco;
+          selectUF.value = c.ufId;
+          // Filter cidades by UF
+          filterCidadesByUF(c.ufId);
+          selectCidade.value = c.cidadeId;
+          inputCEP.value = c.cep;
+          editingId = c.id;
+        }
+      });
+
+      function filterCidadesByUF(ufId) {
+        const cidadesSelect = selectCidade;
+        cidadesSelect.innerHTML = '<option value="">Selecione</option>';
+        cidades
+          .filter((c) => c.ufId === Number(ufId))
+          .forEach((c) => {
+            const option = document.createElement("option");
+            option.value = c.id;
+            option.textContent = c.descricao;
+            cidadesSelect.appendChild(option);
+          });
+      }
+
+      selectUF.addEventListener("change", () => {
+        filterCidadesByUF(selectUF.value);
+        selectCidade.value = "";
+      });
+
+      form.querySelector("#btnNovoCliente").onclick = () => {
+        editingId = null;
+        inputId.value = "";
+        inputNome.value = "";
+        inputCpfCnpj.value = "";
+        inputTelefone.value = "";
+        inputEmail.value = "";
+        inputEndereco.value = "";
+        selectUF.value = "";
+        selectCidade.innerHTML = '<option value="">Selecione</option>';
+        inputCEP.value = "";
+        inputNome.focus();
+      };
+      form.querySelector("#btnEditarCliente").onclick = () => {
+        if (!editingId) {
+          alert("Selecione um cliente para editar.");
+          return;
+        }
+        inputNome.focus();
+      };
+      form.querySelector("#btnGravarCliente").onclick = () => {
+        const nome = inputNome.value.trim();
+        const cpfCnpj = inputCpfCnpj.value.trim();
+        const telefone = inputTelefone.value.trim();
+        const email = inputEmail.value.trim();
+        const endereco = inputEndereco.value.trim();
+        const ufId = Number(selectUF.value);
+        const cidadeId = Number(selectCidade.value);
+        const cep = inputCEP.value.trim();
+
+        if (!nome || !cpfCnpj || !telefone || !email || !endereco || !ufId || !cidadeId || !cep) {
+          alert("Preencha todos os campos obrigatórios.");
+          return;
+        }
+        if (editingId) {
+          const c = clientes.find((c) => c.id === editingId);
+          if (c) {
+            c.nome = nome;
+            c.cpfCnpj = cpfCnpj;
+            c.telefone = telefone;
+            c.email = email;
+            c.endereco = endereco;
+            c.ufId = ufId;
+            c.cidadeId = cidadeId;
+            c.cep = cep;
+          }
+        } else {
+          const newId = clientes.length ? Math.max(...clientes.map((c) => c.id)) + 1 : 1;
+          clientes.push({ id: newId, nome, cpfCnpj, telefone, email, endereco, ufId, cidadeId, cep });
+          editingId = newId;
+          inputId.value = newId;
+        }
+        refreshList();
+        alert("Cliente salvo com sucesso.");
+      };
+      form.querySelector("#btnExcluirCliente").onclick = () => {
+        if (!editingId) {
+          alert("Selecione um cliente para excluir.");
+          return;
+        }
+        if (!confirm("Confirma exclusão do cliente?")) return;
+        const index = clientes.findIndex((c) => c.id === editingId);
+        if (index >= 0) {
+          clientes.splice(index, 1);
+          editingId = null;
+          inputId.value = "";
+          inputNome.value = "";
+          inputCpfCnpj.value = "";
+          inputTelefone.value = "";
+          inputEmail.value = "";
+          inputEndereco.value = "";
+          selectUF.value = "";
+          selectCidade.innerHTML = '<option value="">Selecione</option>';
+          inputCEP.value = "";
+          refreshList();
+          alert("Cliente excluído.");
+        }
+      };
+      form.querySelector("#btnSairCliente").onclick = () => {
+        loadScreen(null);
+      };
+    }
+
+    // Attach event handlers for Pedidos
+    function attachPedidosEvents() {
+      const form = document.getElementById("formPedidos");
+      const inputId = form.querySelector("#pedidoId");
+      const selectCliente = form.querySelector("#pedidoCliente");
+      const inputData = form.querySelector("#pedidoData");
+      const inputTotal = form.querySelector("#pedidoTotal");
+      const tabelaProdutos = document.getElementById("tabelaProdutosPedido");
+      const btnIncluirProduto = document.getElementById("btnIncluirProdutoPedido");
+      const btnExcluirProduto = document.getElementById("btnExcluirProdutoPedido");
+
+      // Reset editing state
+      editingId = null;
+      editingPedidoProdutos = [];
+      selectedPedidoProdutoIndex = null;
+
+      function refreshPedidoProdutosTable() {
+        tabelaProdutos.innerHTML = editingPedidoProdutos
+          .map((item, index) => {
+            const total = item.quantidade * item.precoUnitario;
+            return `
+              <tr class="cursor-pointer ${selectedPedidoProdutoIndex === index ? "bg-blue-100" : ""}" data-index="${index}">
+                <td class="px-2 py-1 border-b border-gray-300">${item.id}</td>
+                <td class="px-2 py-1 border-b border-gray-300">${item.referencia || ""}</td>
+                <td class="px-2 py-1 border-b border-gray-300">${item.descricao}</td>
+                <td class="px-2 py-1 border-b border-gray-300">${item.quantidade}</td>
+                <td class="px-2 py-1 border-b border-gray-300">R$ ${item.precoUnitario.toFixed(2)}</td>
+                <td class="px-2 py-1 border-b border-gray-300">R$ ${total.toFixed(2)}</td>
+                <td class="px-2 py-1 border-b border-gray-300 text-center"><i class="fas fa-check-circle text-blue-600"></i></td>
+              </tr>
+            `;
+          })
+          .join("");
+        updateTotalPedido();
+      }
+
+      function updateTotalPedido() {
+        const total = editingPedidoProdutos.reduce((acc, item) => acc + item.quantidade * item.precoUnitario, 0);
+        inputTotal.value = total.toFixed(2);
+      }
+
+      tabelaProdutos.addEventListener("click", (e) => {
+        const tr = e.target.closest("tr");
+        if (!tr) return;
+        selectedPedidoProdutoIndex = Number(tr.dataset.index);
+        refreshPedidoProdutosTable();
+      });
+
+      btnIncluirProduto.onclick = () => {
+        // Show prompt to select product and quantity
+        let prodOptions = produtos
+          .map((p) => `${p.id} - ${p.descricao} (R$ ${p.precoUnitario.toFixed(2)})`)
+          .join("\n");
+        let prodIdStr = prompt(`Digite o ID do produto para incluir:\n${prodOptions}`);
+        if (!prodIdStr) return;
+        let prodId = Number(prodIdStr);
+        if (isNaN(prodId)) {
+          alert("ID inválido.");
+          return;
+        }
+        let produto = produtos.find((p) => p.id === prodId);
+        if (!produto) {
+          alert("Produto não encontrado.");
+          return;
+        }
+        let quantidadeStr = prompt("Digite a quantidade:");
+        if (!quantidadeStr) return;
+        let quantidade = Number(quantidadeStr);
+        if (isNaN(quantidade) || quantidade <= 0) {
+          alert("Quantidade inválida.");
+          return;
+        }
+        // Check stock
+        if (quantidade > produto.quantidadeEstoque) {
+          alert(`Quantidade maior que estoque disponível (${produto.quantidadeEstoque}).`);
+          return;
+        }
+        // Check if product already in list
+        let existingIndex = editingPedidoProdutos.findIndex((item) => item.id === produto.id);
+        if (existingIndex >= 0) {
+          editingPedidoProdutos[existingIndex].quantidade += quantidade;
+        } else {
+          editingPedidoProdutos.push({
+            id: produto.id,
+            referencia: "",
+            descricao: produto.descricao,
+            quantidade,
+            precoUnitario: produto.precoUnitario,
+          });
+        }
+        refreshPedidoProdutosTable();
+      };
+
+      btnExcluirProduto.onclick = () => {
+        if (selectedPedidoProdutoIndex === null) {
+          alert("Selecione um produto na tabela para excluir.");
+          return;
+        }
+        editingPedidoProdutos.splice(selectedPedidoProdutoIndex, 1);
+        selectedPedidoProdutoIndex = null;
+        refreshPedidoProdutosTable();
+      };
+
+      form.querySelector("#btnNovoPedido").onclick = () => {
+        editingId = null;
+        inputId.value = "";
+        selectCliente.value = "";
+        inputData.value = "";
+        inputTotal.value = "0.00";
+        editingPedidoProdutos = [];
+        selectedPedidoProdutoIndex = null;
+        refreshPedidoProdutosTable();
+      };
+      form.querySelector("#btnEditarPedido").onclick = () => {
+        if (!editingId) {
+          alert("Selecione um pedido para editar (não implementado).");
+          return;
+        }
+      };
+      form.querySelector("#btnCancelarPedido").onclick = () => {
+        if (!confirm("Confirma cancelamento do pedido?")) return;
+        editingId = null;
+        inputId.value = "";
+        selectCliente.value = "";
+        inputData.value = "";
+        inputTotal.value = "0.00";
+        editingPedidoProdutos = [];
+        selectedPedidoProdutoIndex = null;
+        refreshPedidoProdutosTable();
+      };
+      form.querySelector("#btnGravarPedido").onclick = () => {
+        const clienteId = Number(selectCliente.value);
+        const dataPedido = inputData.value;
+        if (!clienteId || !dataPedido) {
+          alert("Cliente e Data do Pedido são obrigatórios.");
+          return;
+        }
+        if (editingPedidoProdutos.length === 0) {
+          alert("Inclua pelo menos um produto no pedido.");
+          return;
+        }
+        if (editingId) {
+          // Edit existing (not implemented)
+          alert("Edição de pedido não implementada.");
+        } else {
+          const newId = pedidos.length ? Math.max(...pedidos.map((p) => p.id)) + 1 : 1;
+          pedidos.push({
+            id: newId,
+            clienteId,
+            dataPedido,
+            total: parseFloat(inputTotal.value),
+            produtos: [...editingPedidoProdutos],
+          });
+          editingId = newId;
+          inputId.value = newId;
+          alert("Pedido salvo com sucesso.");
+        }
+      };
+      form.querySelector("#btnSairPedido").onclick = () => {
+        loadScreen(null);
+      };
+
+      refreshPedidoProdutosTable();
+    }
+
+    // Menu buttons event listeners
+    document.getElementById("btnCategorias").addEventListener("click", () => loadScreen("categorias"));
+    document.getElementById("btnUF").addEventListener("click", () => loadScreen("uf"));
+    document.getElementById("btnCidades").addEventListener("click", () => loadScreen("cidades"));
+    document.getElementById("btnProdutos").addEventListener("click", () => loadScreen("produtos"));
+    document.getElementById("btnClientes").addEventListener("click", () => loadScreen("clientes"));
+    document.getElementById("btnPedidos").addEventListener("click", () => loadScreen("pedidos"));
+
+    // Initial screen
+    loadScreen(null);
+  </script>
+</body>
+</html>
